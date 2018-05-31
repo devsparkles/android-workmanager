@@ -57,4 +57,15 @@ dependencies {
     androidTestImplementation "com.android.support.test:runner:$versions.atsl_runner"
     androidTestImplementation "com.android.support.test:rules:$versions.atsl_runner"
     androidTestImplementation "com.android.support.test.espresso:espresso-core:$versions.espresso"
+
+    def work_version = "1.0.0-alpha02"
+
+    implementation "android.arch.work:work-runtime:$work_version" // use -ktx for Kotlin
+
+    // optional - Firebase JobDispatcher support
+    implementation "android.arch.work:work-firebase:$work_version"
+
+    // optional - Test helpers
+    androidTestImplementation "android.arch.work:work-testing:$work_version"
+
 }

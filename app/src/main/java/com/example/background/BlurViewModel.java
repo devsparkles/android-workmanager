@@ -20,18 +20,61 @@ import android.arch.lifecycle.ViewModel;
 import android.net.Uri;
 import android.text.TextUtils;
 
+import com.example.background.workers.BlurWorker;
+import com.example.background.workers.CleanupWorker;
+import com.example.background.workers.SaveImageToFileWorker;
+
+import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+import androidx.work.WorkContinuation;
+
 public class BlurViewModel extends ViewModel {
 
     private Uri mImageUri;
 
+    private WorkManager mWorkManager;
+
     public BlurViewModel() {
+        mWorkManager = WorkManager.getInstance();
+
     }
 
     /**
      * Create the WorkRequest to apply the blur and save the resulting image
+     *
      * @param blurLevel The amount to blur the image
      */
     void applyBlur(int blurLevel) {
+        WorkContinuation continuation = mWorkManager
+                .beginUniqueWork(Constants.IMAGE_MANIPULATION_WORK_NAME,
+                        ExistingWorkPolicy.REPLACE,
+                        OneTimeWorkRequest.from(CleanupWorker.class));
+
+
+        // Add WorkRequests to blur the image the number of times requested
+        for (int i = 0; i < blurLevel; i++) {
+            OneTimeWorkRequest.Builder blurBuilder =
+                    new OneTimeWorkRequest.Builder(BlurWorker.class);
+
+            // Input the Uri if this is the first blur operation
+            // After the first blur operation the input will be the output of previous
+            // blur operations.
+            if ( i == 0 ) {
+                blurBuilder.setInputData(createInputDataForUri());
+            }
+
+            continuation = continuation.then(blurBuilder.build());
+        }
+
+        // Add WorkRequest to save the image to the filesystem
+        OneTimeWorkRequest save = new OneTimeWorkRequest.Builder(SaveImageToFileWorker.class)
+                .build();
+        continuation = continuation.then(save);
+
+        // Actually start the work
+        continuation.enqueue();
 
     }
 
@@ -55,5 +98,20 @@ public class BlurViewModel extends ViewModel {
     Uri getImageUri() {
         return mImageUri;
     }
+
+
+    /**
+     * Creates the input data bundle which includes the Uri to operate on
+     *
+     * @return Data which contains the Image Uri as a String
+     */
+    private Data createInputDataForUri() {
+        Data.Builder builder = new Data.Builder();
+        if (mImageUri != null) {
+            builder.putString(Constants.KEY_IMAGE_URI, mImageUri.toString());
+        }
+        return builder.build();
+    }
+
 
 }
