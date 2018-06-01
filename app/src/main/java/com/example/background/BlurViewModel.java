@@ -16,6 +16,7 @@
 
 package com.example.background;
 
+import android.arch.lifecycle.LiveData;
 import android.arch.lifecycle.ViewModel;
 import android.net.Uri;
 import android.text.TextUtils;
@@ -24,11 +25,15 @@ import com.example.background.workers.BlurWorker;
 import com.example.background.workers.CleanupWorker;
 import com.example.background.workers.SaveImageToFileWorker;
 
+import java.util.List;
+
+import androidx.work.Constraints;
 import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 import androidx.work.WorkContinuation;
+import androidx.work.WorkStatus;
 
 public class BlurViewModel extends ViewModel {
 
@@ -36,9 +41,25 @@ public class BlurViewModel extends ViewModel {
 
     private WorkManager mWorkManager;
 
+
+    LiveData<List<WorkStatus>> getOutputStatus() { return mSavedWorkStatus; }
+
+    // New instance variable for the WorkStatus
+    private LiveData<List<WorkStatus>> mSavedWorkStatus;
+
+    // New instance variable for the WorkStatus
+    private Uri mOutputUri;
+
+    // Add a getter and setter for mOutputUri
+    void setOutputUri(String outputImageUri) {
+        mOutputUri = uriOrNull(outputImageUri);
+    }
+
+    Uri getOutputUri() { return mOutputUri; }
+
     public BlurViewModel() {
         mWorkManager = WorkManager.getInstance();
-
+        mSavedWorkStatus = WorkManager.getInstance().getStatusesByTag(Constants.TAG_OUTPUT);
     }
 
     /**
@@ -47,6 +68,11 @@ public class BlurViewModel extends ViewModel {
      * @param blurLevel The amount to blur the image
      */
     void applyBlur(int blurLevel) {
+
+
+
+
+
         WorkContinuation continuation = mWorkManager
                 .beginUniqueWork(Constants.IMAGE_MANIPULATION_WORK_NAME,
                         ExistingWorkPolicy.REPLACE,
@@ -68,8 +94,15 @@ public class BlurViewModel extends ViewModel {
             continuation = continuation.then(blurBuilder.build());
         }
 
+
+        Constraints constraints = new Constraints.Builder()
+                .setRequiresCharging(true)
+                .build();
+
         // Add WorkRequest to save the image to the filesystem
         OneTimeWorkRequest save = new OneTimeWorkRequest.Builder(SaveImageToFileWorker.class)
+                .setConstraints(constraints)
+                .addTag(Constants.TAG_OUTPUT)
                 .build();
         continuation = continuation.then(save);
 
@@ -111,6 +144,10 @@ public class BlurViewModel extends ViewModel {
             builder.putString(Constants.KEY_IMAGE_URI, mImageUri.toString());
         }
         return builder.build();
+    }
+
+    void cancelWork() {
+        mWorkManager.cancelAllWorkByTag(Constants.IMAGE_MANIPULATION_WORK_NAME);
     }
 
 

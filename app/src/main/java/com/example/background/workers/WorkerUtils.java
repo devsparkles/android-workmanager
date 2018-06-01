@@ -20,6 +20,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.NonNull;
@@ -81,7 +82,8 @@ final class WorkerUtils {
 
         // Create the notification
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.ic_notification_done)
+                .setColor(Color.BLUE)
                 .setContentTitle(Constants.NOTIFICATION_TITLE)
                 .setContentText(message)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -89,6 +91,7 @@ final class WorkerUtils {
 
         // Show the notification
         NotificationManagerCompat.from(context).notify(Constants.NOTIFICATION_ID, builder.build());
+
     }
 
     /**
